@@ -167,186 +167,122 @@ arrayOfBtns.forEach((element)=>{
         }
         inputHolder.value += input;
         if(input === "="){
-            let ans = calculations(string);
+            let ans = calculateAnswerFromInfixToPostfix(string);
             outputHolder.innerHTML(ans)
         }
         string += input;
     });
 });
-// conver from infix to pre or post fix
+// convert from infix to postfix, or reverse polish notation (rpn)
 // use this to solve the calculation problems
-/*
-A way I figured out in java to convert a rpn to inflix and solve is:
-public int rpn(String[] tokens){
-    Stack<Integer> s = new Stack<>();
-    int a;
-    int b;
-    for(String st : tokens){
-        switch(st){
-            case "*":
-                s.add(s.pop() * s.pop());
-                break;
-            case "+":
-                s.add(s.pop() + s.pop());
-                break;
-            case "/":
-                a = s.pop();
-                b = s.pop);
-                s.add(b / a);
-                break;
-            case "-":
-                a = s.pop();
-                b = s.pop();
-                s.add(b - a);
-                break;
-            default:
-                s.add(Integer.parseInt(st));
-        }
 
-    }
-    return s.pop();
+// function to see if the string is a numeric
+String.prototype.isNumeric = function(){
+    return !isNaN(parseFloat(this)) && isFinite(this);
 }
-*/
-function calculations(input){
-    // need to iterate over the string, first look for parentheses i.e. ( .... )
-    // this is done first, if there is none, then find * or /  and do this left to right
-    // then do the addition and or subtraction
-    const arr = convertToArray(input);
-    let i = 0;
-    let ans = 0;
-    while(i < arr.length){
-        let st = 0;
-        let en = 0;
-        if(arr.find((e)=> e ==="(")){
-            let start = startParentheses(arr);
-            let end = endParentheses(arr);
-            ans += parenthesesNumber(arr, start, end);
-            st = start;
-            en = end;
+// function to clean up when splitting the string based on operations leaving whitespace
+Array.prototype.clean() = function(){
+    for(let i = 0; i < this.length; i++){
+        if(this[i] === ""){
+            this.splice(i,1);
         }
-        let num = getNumber(arr, i);
-        let symbol = arr[num.length];
-        if(symbol === "+" || symbol === "-" || 
-            symbol === "*" || symbol === "/"){
-            if(num.length + 1 != st){
-                let num2 = getNumber(arr, num.length+1)
-                ans += calculateBasedOnSymbol(symbol, num, num2);
-                i+= num.length + num2.length + 1;
-            } else {
-                ans += calculateBasedOnSymbol(symbol, num, ans);
-                 i = en;
-            }
-        }
-        i++;
     }
-    return ans;
-        
+    return this;
 }
-// calculation functions:
-function add(a, b){ return a + b; }
-function subtract(a, b){ return a - b; }
-function multiply(a, b){ return a * b; }
-function divide(a, b){ return a / b; }
-// convert the string to a char array
-function convertToArray(str){
+// make the rpn string an array
+Array.prototype.makeArray = function(postfix){
     const arr = [];
-    for(let i = 0; i < str.length-1; i++){
-        let l = str.charAt(i);
-        if(l != " "){
-            arr.push(l);
-        }
+    for(let i = 0; i < postfix.length; i++){
+        arr.push(postfix.charAt(i));
     }
     return arr;
 }
-// number sorting functions
-function startParentheses(arr){ return arr.findIndex((a)=> a === "("); };
-function endParentheses(arr){ return arr.findIndex((a)=> a === ")"); };
-function parenthesesNumber(arr, s, e){
-    let a = getNumber(arr, s);
-    let b = getNumber(arr, (e-a.length));
-    let symbol = arr[a.length-1];
-    return calculateBasedOnSymbol(symbol, a, b);
-}
-function getNumber(num, start){
-    let s = "";
-    for(let i = start; i < num.length; i++){
-        // regex to find only 0-9
-        if(num[i].match(/^\d/)){
-            s += num[i];
-        } else{
-            break;
+// according to order of operations, certain operators get a higher precedence and if these are associative with right or left
+// as this is only with the four main operators these are all left, but ^ would be right with a precedence higher than mult/div for example
+calculateAnswerFromInfixToPostfix = function(infix){
+    let outputQueue = "";
+    const operatorStack = [];
+    const operators = {
+        "*":{
+            precedence: 3,
+            associativity: "left"
+        },
+        "/":{
+            precedence: 3,
+            associativity: "left"
+        },
+        "+":{
+            precedence: 2,
+            associativity: "left"
+        },
+        "-":{
+            precedence: 2,
+            associativity: "left"
         }
     }
-    return s;
-}
-
-function calculateBasedOnSymbol(symbol, a, b){
-    let ans = 0;
-    switch(symbol){
-        case "+":
-            ans += add(a,b);
-            break;
-        case "-":
-            ans += subtract(a,b);
-            break;
-        case "*":
-            ans += multiply(a,b);
-            break;
-        default:
-        ans += divide(a,b);
+    // remove white space
+    infix = infix.replace(/\s+/g);
+    // split the string based on the operations
+    infix =infix.split(/\+\-\*\/\(\)/).clean();
+    // shunting yard algorithim
+    for(let i = 0; i < infix.length-1; i++){
+        let token = infix[i];
+        if(token.isNumeric()){
+            outputQueue += token;
+        } else if("*/+-".indexOf(token) !== -1){
+            let o1 = token;
+            let o2 = operatorStack[operatorStack.length -1];
+            while("*/+-".indexOf(o2) !== -1 && (
+            (operators[o1].associativity === "left" && 
+            operators[o1].precedence <= operators[o2].precedence) ||
+            (operators[o1].associativity === "right" &&
+            operators[o1].precedence < operators[o2].precedence))){
+                outputQueue += operatorStack.pop();
+                o2 = operatorStack[operatorStack.length -1];
+            }
+        } else if(token === "("){
+            operatorStack.push(token);
+        } else if(token === ")"){
+            while(operatorStack[operatorStack.length-1] !== "("){
+                outputQueue += operatorStack.pop();
+            }
+            // remove the "("
+            operatorStack.pop();
+        }
+        while(operatorStack[operatorStack.length-1] > 0){
+            outputQueue += operatorStack.pop();
+        }
     }
+    const rpn =  makeArray(outputQueue);
+    const ans = solvePostfix(rpn);
     return ans;
-}/*
-function getNum(){
-    let ans = 0;
-    for(let i = 0; i < input.length; i++){
-        // parentheses
-        if(input[i] === "(" || input[i] == /d/){
-            let a = "";
-    let count = 0;
-     // get first number
-    for(let j = i; j < input.length; j++){
-        if(input[j] === "+" || input[j] === "-" || input[j] === "*" || input[j] === "/" || input[j] === " " || input[j] === ")"){
-            count++;
-            break;
+}
+function solvePostfix(arr){
+    const stack = [];
+    let a;
+    let b;
+    for(let st of arr){
+        switch(st){
+            case "*":
+                stack.push(stack.pop() * stack.pop());
+                break;
+            case "+":
+                stack.push(stack.pop() + stack.pop());
+                break;
+            case "/":
+                a = stack.pop();
+                b = stack.pop();
+                stack.push(b / a);
+                break;
+            case "-":
+                a = stack.pop();
+                b = stack.pop();
+                stack.push(b - a);
+                break;
+            default:
+                stack.push(parseFloat(st));
         }
-        a+=input[j];
-        count++;
     }
-    i+=count;
-    // skip whitespace
-    if(input[i] == " "){i++};
-    // variable 
-    let symbol = i;
-    // skip symbol
-    i++;
-    //skip whitespace
-    if(input[i] == " "){i++};
-    let count1 = 0;
-    let b = "";
-    for(let j = i; j < input.length; j++){
-        if(input[j] === "+" || input[j] === "-" || input[j] === "*" || input[j] === "/" || input[j] === " " || input[j] === ")"){
-            count1++;
-            break;
-        }
-        b+=input[j];
-        count1++;
-    }
-    switch(input[symbol]){
-        case "+":
-            ans += add(a,b);
-            break;
-        case "-":
-            ans += subtract(a,b);
-            break;
-        case "*":
-            ans += multiply(a,b);
-            break;
-        default:
-        ans += divide(a,b);
-    }
-        }
-        return ans;
-    }
-}*/
+    return stack.pop();
+}
 container.appendChild(flexContainer);
