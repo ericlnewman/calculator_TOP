@@ -102,7 +102,7 @@ arrayOfBtns.forEach((element)=>{
         let input = 0;
         switch(element.id){
             case "0":
-                input = "(";
+                input = "( ";
                 break;
             case "1":
                 input = 7;
@@ -117,7 +117,7 @@ arrayOfBtns.forEach((element)=>{
                 input = "";
                 break;
             case "5":
-                input = ")";
+                input = " )";
                 break;
             case "6":
                 input = 8;
@@ -132,7 +132,7 @@ arrayOfBtns.forEach((element)=>{
                 input = 0;
                 break;
             case "10":
-                input = "";
+                inputHolder.value = "";
                 break;
             case "11":
                 input = 9;
@@ -147,63 +147,111 @@ arrayOfBtns.forEach((element)=>{
                 input = ".";
                 break;
             case "15":
-                input = "/";
+                input = " / ";
                 break;
             case "16":
-                input = "*";
+                input = " * ";
                 break;
             case "17":
-                input = "-";
+                input = " - ";
                 break;
             case "18":
-                input = "+";
+                input = " + ";
                 break;
             case "19":
-                input = "=";
-
+                input = " =";
                 break;
             default:
                 break;
         }
         inputHolder.value += input;
-        if(input === "="){
-            let ans = calculateAnswerFromInfixToPostfix(string);
-            outputHolder.innerHTML(ans)
+        if(input === " ="){
+            let ans = calculation(inputHolder.value);
+            outputHolder.innerHTML = ans
         }
-        string += input;
     });
 });
+const calculation = (strInfix) =>{
+    let rpn = shuntingYard(strInfix);
+    let array = makeArray(rpn);
+    let answer = solvePostfix(array);
+    return answer;
+};
 // convert from infix to postfix, or reverse polish notation (rpn)
 // use this to solve the calculation problems
+// functional approach to shunting yard algorithim
+shuntingYard = (infix) =>{
+    // according to order of operations, certain operators get a higher precedence and if these are associative with right or left
+    // as this is only with the four main operators these are all left, but ^ would be right with a precedence higher than mult/div for example
+    const operations ={
+        "+": 2,
+        "-": 2,
+        "*": 3,
+        "/": 3
+    };
+    let peek = (element) => element[element.length-1];
+    const stack = [];
+    return infix.split("").reduce((output, token) =>{
+        // test if the token is a number
+        console.log("token is " + token);
+        if(/\d/.test(token)){
+            // see if it is a multidigit number
+            output.currentNumber = output.currentNumber || "";
+            output.currentNumber += token;
+        } else {
+            output = handleNumber(output);
+            if(token in operations){
+                while(peek(stack) in operations && operations[token] <= operations[peek(stack)])
+                    output.push(stack.pop());
+                stack.push(token);
+            }
+        }
+        if(token == "("){
+            stack.push(token);
+        }
+        if(token == ")"){
+            while(peek(stack) != "(")
+                output.push(stack.pop());
+            // remove "("
+            stack.pop();
+        }
+        return output;
+    }, [])
+    .concat(stack.reverse())
+    .join(" ");
 
-// function to see if the string is a numeric
-isNumeric = function(str){
-    return !isNaN(parseFloat(str)) && isFinite(str);
-}
+    function handleNumber(output){
+        const number = parseFloat(output.currentNumber);
+        if(!isNaN(number)){
+            output.push(number);
+        }
+        output.currentNumber = "";
+        return output;
+    }
+};
 // make the rpn string an array
 makeArray = function(postfix){
     const arr = [];
-    let current = "";
     console.log("postfix is " + postfix)
     for(let i = 0; i < postfix.length; i++){
         const c = postfix.charAt(i);
-       console.log("c is " + c);
-        if(isNumeric(c)){
-            console.log("current is " + current);
-            current += c;
-        } else {
-            if(current !== ""){
-                console.log("current should be changing... from this " + current);
-                arr.push(current);
-                current = "";
-                console.log("current should be nothing... " + current);
+        if(c !== " "){
+            if(/\d/.test(c)){
+                let n = "";
+                while(postfix.charAt(i) !== " "){
+                    n+= postfix.charAt(i);
+                    i++;
+                }
+                arr.push(n);
+            } else{
+                arr.push(c);
             }
-            arr.push(c);
         }
     }
     console.log("arr is " + arr);
     return arr;
 }
+// solve the array of rpn
 function solvePostfix(arr){
     const stack = [];
     let a;
@@ -231,77 +279,6 @@ function solvePostfix(arr){
         }
     }
     return stack.pop();
-}
-// according to order of operations, certain operators get a higher precedence and if these are associative with right or left
-// as this is only with the four main operators these are all left, but ^ would be right with a precedence higher than mult/div for example
-this.calculateAnswerFromInfixToPostfix = function(infix){
-    let outputQueue = "";
-    const operatorStack = [];
-    const operators = {
-        "*":{
-            precedence: 3,
-            associativity: "left"
-        },
-        "/":{
-            precedence: 3,
-            associativity: "left"
-        },
-        "+":{
-            precedence: 2,
-            associativity: "left"
-        },
-        "-":{
-            precedence: 2,
-            associativity: "left"
-        }
-    }
-    // remove white space
-    infix = infix.replace(/\s+/g, "");
-    // get length of shortened string
-    const len = infix.length;
-    // shunting yard algorithim
-    for(let i = 0; i < len; i++){
-        console.log("operatorsStack length is " + operatorStack.length);
-        let token = infix[i];
-        if(isNumeric(token)){
-                while(isNumeric(infix[i+1])){
-                i++;
-                token += infix[i];
-            }
-            outputQueue += token + " ";
-        } else if("*/+-".indexOf(token) !== -1){
-            console.log("token is " + token);
-            let o1 = token;
-            let o2 = operatorStack[operatorStack.length -1];
-            console.log("o2 is " + o2);
-            while("*/+-".indexOf(o2) !== -1 && (
-            (operators[o1].associativity === "left" && 
-            operators[o1].precedence <= operators[o2].precedence))){
-                console.log("it entered the while loop");
-                outputQueue += operatorStack.pop() + " ";
-                console.log("and now o2 is " + o2);
-            }
-            console.log("o1 is " + o1);
-            operatorStack.push(o1);
-            console.log("operatorStack is " + operatorStack);
-        } else if(token === "("){
-            operatorStack.push(token);
-        } else if(token === ")"){
-            while(operatorStack[operatorStack.length-1] !== "("){
-                outputQueue += operatorStack.pop();
-            }
-            // remove the "("
-            operatorStack.pop();
-        }
-        while(operatorStack.length > 0){
-            outputQueue += operatorStack.pop() + " ";
-        }
-    }
-    const rpn =  makeArray(outputQueue);
-    const ans = solvePostfix(rpn);
-    return ans;
-}
-const testNumber = "5 * 2 + (33 - 2) / 3 =";
-console.log(testNumber);
-console.log(calculateAnswerFromInfixToPostfix(testNumber))
+};
+
 container.appendChild(flexContainer);
