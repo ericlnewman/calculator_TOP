@@ -114,7 +114,7 @@ arrayOfBtns.forEach((element)=>{
                 input = 1;
                 break;
             case "4":
-                input = "";
+                inputHolder.value = "";
                 break;
             case "5":
                 input = " )";
@@ -132,7 +132,12 @@ arrayOfBtns.forEach((element)=>{
                 input = 0;
                 break;
             case "10":
-                inputHolder.value = "";
+                if(inputHolder.value.length > 1){
+                    let backspace = inputHolder.value.slice(0, inputHolder.value.length-1);
+                    inputHolder.value = backspace;
+                } else {
+                    inputHolder.value = "";
+                }
                 break;
             case "11":
                 input = 9;
