@@ -5,7 +5,7 @@ const container = document.querySelector("#container");
 const flexContainer = document.createElement("div");
 flexContainer.id = "flex";
 const inputHolder = document.createElement("input");
-const outputHolder = document.createElement("output");
+const outputHolder = document.createElement("div");
 const numberBox = document.createElement("div");
 inputHolder.className = "holder";
 outputHolder.className = "holder";
@@ -177,85 +177,32 @@ arrayOfBtns.forEach((element)=>{
 // use this to solve the calculation problems
 
 // function to see if the string is a numeric
-String.prototype.isNumeric = function(){
-    return !isNaN(parseFloat(this)) && isFinite(this);
-}
-// function to clean up when splitting the string based on operations leaving whitespace
-Array.prototype.clean() = function(){
-    for(let i = 0; i < this.length; i++){
-        if(this[i] === ""){
-            this.splice(i,1);
-        }
-    }
-    return this;
+isNumeric = function(str){
+    return !isNaN(parseFloat(str)) && isFinite(str);
 }
 // make the rpn string an array
-Array.prototype.makeArray = function(postfix){
+makeArray = function(postfix){
     const arr = [];
+    let current = "";
+    console.log("postfix is " + postfix)
     for(let i = 0; i < postfix.length; i++){
-        arr.push(postfix.charAt(i));
+        const c = postfix.charAt(i);
+       console.log("c is " + c);
+        if(isNumeric(c)){
+            console.log("current is " + current);
+            current += c;
+        } else {
+            if(current !== ""){
+                console.log("current should be changing... from this " + current);
+                arr.push(current);
+                current = "";
+                console.log("current should be nothing... " + current);
+            }
+            arr.push(c);
+        }
     }
+    console.log("arr is " + arr);
     return arr;
-}
-// according to order of operations, certain operators get a higher precedence and if these are associative with right or left
-// as this is only with the four main operators these are all left, but ^ would be right with a precedence higher than mult/div for example
-calculateAnswerFromInfixToPostfix = function(infix){
-    let outputQueue = "";
-    const operatorStack = [];
-    const operators = {
-        "*":{
-            precedence: 3,
-            associativity: "left"
-        },
-        "/":{
-            precedence: 3,
-            associativity: "left"
-        },
-        "+":{
-            precedence: 2,
-            associativity: "left"
-        },
-        "-":{
-            precedence: 2,
-            associativity: "left"
-        }
-    }
-    // remove white space
-    infix = infix.replace(/\s+/g);
-    // split the string based on the operations
-    infix =infix.split(/\+\-\*\/\(\)/).clean();
-    // shunting yard algorithim
-    for(let i = 0; i < infix.length-1; i++){
-        let token = infix[i];
-        if(token.isNumeric()){
-            outputQueue += token;
-        } else if("*/+-".indexOf(token) !== -1){
-            let o1 = token;
-            let o2 = operatorStack[operatorStack.length -1];
-            while("*/+-".indexOf(o2) !== -1 && (
-            (operators[o1].associativity === "left" && 
-            operators[o1].precedence <= operators[o2].precedence) ||
-            (operators[o1].associativity === "right" &&
-            operators[o1].precedence < operators[o2].precedence))){
-                outputQueue += operatorStack.pop();
-                o2 = operatorStack[operatorStack.length -1];
-            }
-        } else if(token === "("){
-            operatorStack.push(token);
-        } else if(token === ")"){
-            while(operatorStack[operatorStack.length-1] !== "("){
-                outputQueue += operatorStack.pop();
-            }
-            // remove the "("
-            operatorStack.pop();
-        }
-        while(operatorStack[operatorStack.length-1] > 0){
-            outputQueue += operatorStack.pop();
-        }
-    }
-    const rpn =  makeArray(outputQueue);
-    const ans = solvePostfix(rpn);
-    return ans;
 }
 function solvePostfix(arr){
     const stack = [];
@@ -285,4 +232,76 @@ function solvePostfix(arr){
     }
     return stack.pop();
 }
+// according to order of operations, certain operators get a higher precedence and if these are associative with right or left
+// as this is only with the four main operators these are all left, but ^ would be right with a precedence higher than mult/div for example
+this.calculateAnswerFromInfixToPostfix = function(infix){
+    let outputQueue = "";
+    const operatorStack = [];
+    const operators = {
+        "*":{
+            precedence: 3,
+            associativity: "left"
+        },
+        "/":{
+            precedence: 3,
+            associativity: "left"
+        },
+        "+":{
+            precedence: 2,
+            associativity: "left"
+        },
+        "-":{
+            precedence: 2,
+            associativity: "left"
+        }
+    }
+    // remove white space
+    infix = infix.replace(/\s+/g, "");
+    // get length of shortened string
+    const len = infix.length;
+    // shunting yard algorithim
+    for(let i = 0; i < len; i++){
+        console.log("operatorsStack length is " + operatorStack.length);
+        let token = infix[i];
+        if(isNumeric(token)){
+                while(isNumeric(infix[i+1])){
+                i++;
+                token += infix[i];
+            }
+            outputQueue += token + " ";
+        } else if("*/+-".indexOf(token) !== -1){
+            console.log("token is " + token);
+            let o1 = token;
+            let o2 = operatorStack[operatorStack.length -1];
+            console.log("o2 is " + o2);
+            while("*/+-".indexOf(o2) !== -1 && (
+            (operators[o1].associativity === "left" && 
+            operators[o1].precedence <= operators[o2].precedence))){
+                console.log("it entered the while loop");
+                outputQueue += operatorStack.pop() + " ";
+                console.log("and now o2 is " + o2);
+            }
+            console.log("o1 is " + o1);
+            operatorStack.push(o1);
+            console.log("operatorStack is " + operatorStack);
+        } else if(token === "("){
+            operatorStack.push(token);
+        } else if(token === ")"){
+            while(operatorStack[operatorStack.length-1] !== "("){
+                outputQueue += operatorStack.pop();
+            }
+            // remove the "("
+            operatorStack.pop();
+        }
+        while(operatorStack.length > 0){
+            outputQueue += operatorStack.pop() + " ";
+        }
+    }
+    const rpn =  makeArray(outputQueue);
+    const ans = solvePostfix(rpn);
+    return ans;
+}
+const testNumber = "5 * 2 + (33 - 2) / 3 =";
+console.log(testNumber);
+console.log(calculateAnswerFromInfixToPostfix(testNumber))
 container.appendChild(flexContainer);
